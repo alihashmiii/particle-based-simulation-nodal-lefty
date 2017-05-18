@@ -1,4 +1,4 @@
-# Brownian-Motion-Ligand-Receptor
+# Particle-based-reaction-diffusion-simulation-nodal-lefty
 an attempt to model reaction diffusion using particles
 
 Author: Ali Hashmi
