@@ -2,7 +2,7 @@
 an attempt to model reaction diffusion using particles
 
 Author: Ali Hashmi
-Date: 2016
+Date: Dec 2015 - Feb 2017
 
 You need Mathematica to view the notebooks containing the code properly !
 
