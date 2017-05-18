@@ -1,0 +1,428 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 10.4' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[     23238,        420]
+NotebookOptionsPosition[     22513,        389]
+NotebookOutlinePosition[     22856,        404]
+CellTagsIndexPosition[     22813,        401]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+
+Cell[CellGroupData[{
+Cell["code from rxnparam.c (authored by Steven Andrews)", "Section",
+ CellChangeTimes->{{3.6910513923346815`*^9, 3.691051416066293*^9}, {
+  3.6910536250565424`*^9, 3.691053726894224*^9}, {3.6910538072439823`*^9, 
+  3.6910538170405235`*^9}}],
+
+Cell[BoxData[
+ RowBox[{"Needs", "[", "\"\<CCompilerDriver`\>\"", "]"}]], "Input",
+ CellChangeTimes->{{3.6910505918440228`*^9, 3.691050611944315*^9}, 
+   3.6910507366480637`*^9},
+ Background->RGBColor[0.87, 0.94, 1]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"bindunbind", " ", "=", " ", 
+  RowBox[{"CreateExecutable", "[", 
+   RowBox[{
+   "\"\<\n/* File rxnparam.c, written by Steve Andrews, 2003.\nThis code is \
+in the public domain.  It is not copyrighted and may not be\ncopyrighted.\n\n\
+This file calculates reaction rates for a stochastic spatial numerical \
+method,\nas described in the research paper \\\"Stochastic Simulation of \
+Chemical Reactions\nwith Spatial Resolution and Single Molecule Detail\\\" \
+written by Steven S. Andrews\nand Dennis Bray, which was published in \
+Physical Biology in 2004.  The code\nhere is written entirely in ANSII C.\n\n\
+History: Started 3/02, converted to a separate file 5/31/03.\n  Several \
+updates made and documentation written 4/08.   */\n\n#include <stdio.h>\n\
+#include <stdlib.h>\n#include <math.h>\n\n#define PI 3.14159265358979323846\n\
+#define SQRT2PI 2.50662827462\n\n\n\
+/*****************************************************************************\
+*/\n/***  LOOK-UP FUNCTIONS FOR REACTION RATES AND BINDING AND UNBINDING \
+RADII  ***/\n\
+/*****************************************************************************\
+*/\n\n/* numrxnrate calculates the bimolecular reaction rate for the \
+simulation\nalgorithm, based on the rms step length in step, the binding \
+radius in a, and\nthe unbinding radius in b.  It uses cubic polynomial \
+interpolation on previously\ncomputed data, with interpolation both on the \
+reduced step length (step/a) and\non the reduced unbinding radius (b/a).  \
+Enter a negative value of b for\nirreversible reactions.  If the input \
+parameters result in reduced values that\nare off the edge of the tabulated \
+data, analytical results are used where\npossible.  If there are no \
+analytical results, the data are extrapolated.\nVariable components: s is \
+step, i is irreversible, r is reversible with b>a, b\nis reversible with b<a, \
+y is a rate.  The returned value is the reaction rate\ntimes the time step \
+delta_t.  In other words, this rate constant is per time\nstep, not per time \
+unit; it has units of length cubed.  */\ndouble numrxnrate(double step,double \
+a,double b) {\n\\tstatic const double yi[]={\\t\\t\\t\\t// 600 pts, eps=1e-5, \
+up&down, error<2.4%\n\
+\\t\\t4.188584,4.188381,4.187971,4.187141,4.185479,4.182243,4.1761835,4.\
+1652925,\n\
+\\t\\t4.146168,4.112737,4.054173,3.95406,3.7899875,3.536844,3.178271,2.\
+7239775,\n\
+\\t\\t2.2178055,1.7220855,1.2875175,0.936562,0.668167,0.470021,0.327102,0.\
+225858,\n\\t\\t0.1551475,0.1061375,0.072355,0.049183,0.0333535,0.022576,0.\
+015257};\n\\tstatic const double yr[]={\\t\\t\\t\\t// 500 pts, eps=1e-5, \
+up&down, error<2.2%\n\
+\\t\\t4.188790,4.188790,4.188790,4.188788,4.188785,4.188775,4.188747,4.188665,\
+\n\\t\\t4.188438,4.187836,4.186351,4.182961,4.175522,4.158666,4.119598,4.\
+036667,\n\\t\\t3.883389,3.641076,3.316941,2.945750,2.566064,2.203901,1.872874,\
+1.578674,\n\
+\\t\\t1.322500,1.103003,0.916821,0.759962,0.628537,0.518952,0.428136,\n\
+\\t\\t4.188790,4.188790,4.188789,4.188786,4.188778,4.188756,4.188692,4.188509,\
+\n\\t\\t4.188004,4.186693,4.183529,4.176437,4.160926,4.125854,4.047256,3.\
+889954,\n\\t\\t3.621782,3.237397,2.773578,2.289205,1.831668,1.427492,1.087417,\
+0.811891,\n\
+\\t\\t0.595737,0.430950,0.308026,0.217994,0.152981,0.106569,0.073768,\n\
+\\t\\t4.188790,4.188789,4.188788,4.188783,4.188768,4.188727,4.188608,4.188272,\
+\n\\t\\t4.187364,4.185053,4.179623,4.167651,4.141470,4.082687,3.956817,3.\
+722364,\n\\t\\t3.355690,2.877999,2.353690,1.850847,1.411394,1.050895,0.768036,\
+0.553077,\n\
+\\t\\t0.393496,0.277134,0.193535,0.134203,0.092515,0.063465,0.043358,\n\
+\\t\\t4.188790,4.188789,4.188786,4.188777,4.188753,4.188682,4.188480,4.187919,\
+\n\\t\\t4.186431,4.182757,4.174363,4.156118,4.116203,4.028391,3.851515,3.\
+546916,\n\\t\\t3.110183,2.587884,2.055578,1.574898,1.174608,0.858327,0.617223,\
+0.438159,\n\
+\\t\\t0.307824,0.214440,0.148358,0.102061,0.069885,0.047671,0.032414,\n\
+\\t\\t4.188789,4.188788,4.188783,4.188769,4.188729,4.188614,4.188288,4.187399,\
+\n\\t\\t4.185108,4.179638,4.167499,4.141379,4.084571,3.964576,3.739474,3.\
+381771,\n\\t\\t2.906433,2.372992,1.854444,1.401333,1.032632,0.746509,0.531766,\
+0.374442,\n\
+\\t\\t0.261247,0.180929,0.124557,0.085332,0.058229,0.039604,0.026865,\n\
+\\t\\t4.188789,4.188786,4.188778,4.188756,4.188692,4.188510,4.188002,4.186650,\
+\n\\t\\t4.183288,4.175566,4.158864,4.123229,4.047257,3.896024,3.632545,3.\
+242239,\n\\t\\t2.750962,2.220229,1.717239,1.285681,0.939696,0.674540,0.477621,\
+0.334612,\n\
+\\t\\t0.232460,0.160415,0.110103,0.075242,0.051236,0.034789,0.023565,\n\
+\\t\\t4.188788,4.188784,4.188772,4.188737,4.188637,4.188354,4.187585,4.185607,\
+\n\\t\\t4.180895,4.170490,4.148460,4.102035,4.006907,3.829897,3.541151,3.\
+133335,\n\\t\\t2.635739,2.109597,1.619284,1.204298,0.875185,0.625190,0.440882,\
+0.307818,\n\
+\\t\\t0.213235,0.146800,0.100560,0.068608,0.046655,0.031645,0.021415,\n\
+\\t\\t4.188787,4.188780,4.188761,4.188707,4.188552,4.188124,4.186995,4.184222,\
+\n\\t\\t4.177931,4.164527,4.136619,4.079198,3.967945,3.772932,3.468711,3.\
+050092,\n\\t\\t2.548726,2.026932,1.547039,1.144954,0.828592,0.589866,0.414774,\
+0.288895,\n\
+\\t\\t0.199728,0.137273,0.093903,0.063994,0.043478,0.029467,0.019931,\n\
+\\t\\t4.188785,4.188774,4.188745,4.188661,4.188426,4.187795,4.186203,4.182494,\
+\n\\t\\t4.174471,4.157859,4.123939,4.056910,3.934028,3.727335,3.412145,2.\
+985387,\n\\t\\t2.481620,1.963935,1.492519,1.100533,0.793976,0.563797,0.395615,\
+0.275071,\n\
+\\t\\t0.189896,0.130359,0.089086,0.060661,0.041187,0.027899,0.018863,\n\
+\\t\\t4.188782,4.188766,4.188720,4.188592,4.188244,4.187347,4.185205,4.180486,\
+\n\\t\\t4.170691,4.150875,4.111574,4.037574,3.906673,3.691217,3.367270,2.\
+934386,\n\\t\\t2.429282,1.915212,1.450660,1.066615,0.767733,0.544143,0.381225,\
+0.264724,\n\
+\\t\\t0.182558,0.125209,0.085504,0.058187,0.039490,0.026741,0.018074,\n\
+\\t\\t4.188777,4.188752,4.188683,4.188492,4.187993,4.186777,4.184049,4.178342,\
+\n\\t\\t4.166861,4.144167,4.100756,4.021817,3.884852,3.662169,3.331386,2.\
+893934,\n\\t\\t2.388069,1.877097,1.418051,1.040351,0.747549,0.529083,0.370239,\
+0.256844,\n\
+\\t\\t0.176983,0.121304,0.082791,0.056318,0.038211,0.025871,0.017486,\n\
+\\t\\t4.188770,4.188732,4.188628,4.188352,4.187671,4.186115,4.182830,4.176234,\
+\n\\t\\t4.163261,4.138284,4.092055,4.009206,3.867171,3.638731,3.302580,2.\
+861651,\n\\t\\t2.355385,1.846979,1.392364,1.019841,0.731849,0.517409,0.361743,\
+0.250766,\n\
+\\t\\t0.172684,0.118295,0.080706,0.054883,0.037230,0.025204,0.017035,\n\
+\\t\\t4.188759,4.188702,4.188551,4.188171,4.187294,4.185421,4.181657,4.174292,\
+\n\\t\\t4.160089,4.133434,4.084980,3.998932,3.852801,3.619743,3.279339,2.\
+835771,\n\\t\\t2.329266,1.822929,1.372041,1.003734,0.719559,0.508296,0.355130,\
+0.246037,\n\
+\\t\\t0.169346,0.115966,0.079096,0.053783,0.036482,0.024699,0.016694,\n\
+\\t\\t4.188742,4.188659,4.188449,4.187958,4.186900,4.184765,4.180606,4.172596,\
+\n\\t\\t4.157440,4.129551,4.079183,3.990499,3.841031,3.604270,3.260519,2.\
+814871,\n\\t\\t2.308170,1.803653,1.355971,0.991032,0.709899,0.501150,0.349948,\
+0.242337,\n\
+\\t\\t0.166741,0.114156,0.077855,0.052940,0.035912,0.024316,0.016437,\n\
+\\t\\t4.188719,4.188603,4.188330,4.187736,4.186534,4.184200,4.179711,4.171172,\
+\n\\t\\t4.155254,4.126372,4.074457,3.983648,3.831433,3.591609,3.245083,2.\
+797662,\n\\t\\t2.290945,1.788288,1.343237,0.981003,0.702295,0.495533,0.345879,\
+0.239437,\n\
+\\t\\t0.164709,0.112756,0.076902,0.052295,0.035478,0.024023,0.016239,\n\
+\\t\\t4.188688,4.188536,4.188204,4.187532,4.186227,4.183725,4.178948,4.169962,\
+\n\\t\\t4.153461,4.123737,4.070508,3.977891,3.823388,3.580958,3.232035,2.\
+783281,\n\\t\\t2.277011,1.776032,1.333144,0.973094,0.696303,0.491107,0.342676,\
+0.237173,\n\
+\\t\\t0.163143,0.111689,0.076180,0.051808,0.035151,0.023802,0.016089};\n\
+\\tconst double yb[]={\\t\\t\\t\\t\\t\\t\\t// 100 pts, eps=1e-5, down only\n\
+\\t\\t4.188790,4.188791,4.188791,4.188793,4.188798,4.188814,4.188859,4.188986,\
+\n\\t\\t4.189328,4.190189,4.192213,4.196874,4.208210,4.236983,4.307724,4.\
+473512,\n\\t\\t4.852754,5.723574,7.838600,13.880005,40.362527,-1,-1,-1,\n\
+\\t\\t-1,-1,-1,-1,-1,-1,-1,\n\
+\\t\\t4.188790,4.188791,4.188791,4.188793,4.188798,4.188813,4.188858,4.188982,\
+\n\\t\\t4.189319,4.190165,4.192156,4.196738,4.207879,4.236133,4.305531,4.\
+467899,\n\\t\\t4.838139,5.683061,7.710538,13.356740,36.482501,-1,-1,-1,\n\
+\\t\\t-1,-1,-1,-1,-1,-1,-1,\n\
+\\t\\t4.188790,4.188791,4.188791,4.188793,4.188798,4.188812,4.188854,4.188973,\
+\n\\t\\t4.189292,4.190095,4.191984,4.196332,4.206887,4.233594,4.298997,4.\
+451212,\n\\t\\t4.795122,5.566006,7.352764,11.994360,28.085852,261.834153,-1,-\
+1,\n\\t\\t-1,-1,-1,-1,-1,-1,-1,\n\
+\\t\\t4.188790,4.188791,4.188791,4.188792,4.188797,4.188810,4.188848,4.188956,\
+\n\\t\\t4.189246,4.189978,4.191699,4.195657,4.205243,4.229397,4.288214,4.\
+424093,\n\\t\\t4.726265,5.384525,6.831926,10.241985,19.932261,69.581522,-1,-1,\
+\n\\t\\t-1,-1,-1,-1,-1,-1,-1,\n\
+\\t\\t4.188790,4.188791,4.188791,4.188792,4.188796,4.188807,4.188840,4.188933,\
+\n\\t\\t4.189183,4.189814,4.191300,4.194716,4.202957,4.223593,4.273478,4.\
+387310,\n\\t\\t4.635278,5.155725,6.228070,8.494834,13.840039,30.707995,217.\
+685066,-1,\n\\t\\t-1,-1,-1,-1,-1,-1,-1,\n\
+\\t\\t4.188790,4.188791,4.188791,4.188792,4.188795,4.188803,4.188829,4.188903,\
+\n\\t\\t4.189101,4.189604,4.190789,4.193514,4.200048,4.216255,4.254956,4.\
+342131,\n\\t\\t4.526936,4.897901,5.610205,6.966144,9.704274,16.182908,37.\
+778925,387.192994,\n\\t\\t-1,-1,-1,-1,-1,-1,-1,\n\
+\\t\\t4.188790,4.188790,4.188791,4.188791,4.188793,4.188799,4.188817,4.188866,\
+\n\\t\\t4.189002,4.189348,4.190168,4.192054,4.196535,4.207468,4.233117,4.\
+289818,\n\\t\\t4.406055,4.627980,5.025468,5.719284,6.973164,9.454673,15.\
+165237,32.669841,\n\\t\\t175.505441,-1,-1,-1,-1,-1,-1,\n\
+\\t\\t4.188790,4.188790,4.188790,4.188791,4.188791,4.188794,4.188801,4.188823,\
+\n\\t\\t4.188885,4.189047,4.189439,4.190344,4.192444,4.197336,4.208277,4.\
+231803,\n\\t\\t4.277545,4.359611,4.499274,4.738728,5.168746,5.973516,7.554064,\
+10.974866,\n\\t\\t20.015747,59.729701,-1,-1,-1,-1,-1,\n\
+\\t\\t4.188790,4.188790,4.188790,4.188790,4.188789,4.188788,4.188784,4.188774,\
+\n\\t\\t4.188751,4.188701,4.188602,4.188390,4.187803,4.185972,4.180908,4.\
+169592,\n\\t\\t4.145768,4.102670,4.041148,3.980771,3.961901,4.039620,4.292076,\
+4.858676,\n\\t\\t6.044956,8.672140,15.704344,48.437802,-1,-1,-1,\n\
+\\t\\t4.188790,4.188790,4.188790,4.188789,4.188787,4.188781,4.188764,4.188718,\
+\n\\t\\t4.188599,4.188311,4.187661,4.186201,4.182644,4.173501,4.151495,4.\
+104610,\n\\t\\t4.014334,3.863341,3.650600,3.398722,3.141206,2.906174,2.713737,\
+2.580237,\n\
+\\t\\t2.524103,2.574058,2.785372,3.278275,4.350631,6.897568,14.924070,\n\
+\\t\\t4.188790,4.188790,4.188790,4.188788,4.188784,4.188773,4.188742,4.188656,\
+\n\\t\\t4.188430,4.187878,4.186617,4.183786,4.177000,4.160053,4.120473,4.\
+038061,\n\\t\\t3.886243,3.645077,3.322103,2.951900,2.573084,2.212134,1.883264,\
+1.592189,\n\
+\\t\\t1.339766,1.124235,0.942582,0.791354,0.667141,0.566827,0.487862};\n\
+\\tconst double slo=3,sinc=-0.2;\\t\\t\\t\\t\\t\\t\\t\\t// logs of values; \
+shi=-3\n\\tconst double blor=0,bincr=0.2;\\t\\t\\t\\t\\t\\t\\t\\t// logs of \
+values; bhir=3\n\\tconst double blob=0,bincb=0.1;\\t\\t\\t\\t\\t\\t\\t\\t// \
+actual values; bhib=1\n\\tconst int snum=31,bnumr=16,bnumb=11;\n\\tdouble \
+x[4],y[4],z[4];\n\\tint sindx,bindx,i,j;\n\\tdouble ans;\n\n\
+\\tif(step<0||a<0) return -1;\n\\tif(step==0&&b>=0&&b<1) return -1;\n\
+\\tif(step==0) return 0;\n\\tstep=log(step/a);\n\\tb/=a;\n\n\
+\\tsindx=(int)((step-slo)/sinc);\n\\tfor(i=0;i<4;i++) \
+x[i]=slo+(sindx-1+i)*sinc;\n\
+\\tz[0]=(step-x[1])*(step-x[2])*(step-x[3])/(-6.0*sinc*sinc*sinc);\n\
+\\tz[1]=(step-x[0])*(step-x[2])*(step-x[3])/(2.0*sinc*sinc*sinc);\n\
+\\tz[2]=(step-x[0])*(step-x[1])*(step-x[3])/(-2.0*sinc*sinc*sinc);\n\
+\\tz[3]=(step-x[0])*(step-x[1])*(step-x[2])/(6.0*sinc*sinc*sinc);\n\n\
+\\tif(b<0)\n\\t\\tfor(ans=i=0;i<4;i++) {\n\\t\\t\\tif(sindx-1+i>=snum) \
+ans+=z[i]*2.0*PI*exp(2.0*x[i]);\n\\t\\t\\telse if(sindx-1+i<0) \
+ans+=z[i]*4.0*PI/3.0;\n\\t\\t\\telse ans+=z[i]*yi[sindx-1+i]; }\n\\telse \
+if(b<1.0) {\n\\t\\tbindx=(int)((b-blob)/bincb);\n\\t\\tif(bindx<1) bindx=1;\n\
+\\t\\telse if(bindx+2>=bnumb) bindx=bnumb-3;\n\
+\\t\\twhile(sindx+3>=snum||(sindx>0&&yb[(bindx-1)*snum+sindx+3]<0)) sindx--;\n\
+\\t\\tfor(i=0;i<4;i++) x[i]=slo+(sindx-1+i)*sinc;\n\
+\\t\\tz[0]=(step-x[1])*(step-x[2])*(step-x[3])/(-6.0*sinc*sinc*sinc);\n\
+\\t\\tz[1]=(step-x[0])*(step-x[2])*(step-x[3])/(2.0*sinc*sinc*sinc);\n\
+\\t\\tz[2]=(step-x[0])*(step-x[1])*(step-x[3])/(-2.0*sinc*sinc*sinc);\n\
+\\t\\tz[3]=(step-x[0])*(step-x[1])*(step-x[2])/(6.0*sinc*sinc*sinc);\n\
+\\t\\tfor(j=0;j<4;j++)\n\\t\\t\\tfor(y[j]=i=0;i<4;i++) {\n\
+\\t\\t\\t\\tif(sindx-1+i>=snum) y[j]+=z[i]*yb[(bindx-1+j)*snum];\n\
+\\t\\t\\t\\telse if(sindx-1+i<0) y[j]+=z[i]*4.0*PI/3.0;\n\\t\\t\\t\\telse \
+y[j]+=z[i]*yb[(bindx-1+j)*snum+sindx-1+i]; }\n\\t\\tfor(j=0;j<4;j++) \
+x[j]=blob+(bindx-1+j)*bincb;\n\
+\\t\\tz[0]=(b-x[1])*(b-x[2])*(b-x[3])/(-6.0*bincb*bincb*bincb);\n\
+\\t\\tz[1]=(b-x[0])*(b-x[2])*(b-x[3])/(2.0*bincb*bincb*bincb);\n\
+\\t\\tz[2]=(b-x[0])*(b-x[1])*(b-x[3])/(-2.0*bincb*bincb*bincb);\n\
+\\t\\tz[3]=(b-x[0])*(b-x[1])*(b-x[2])/(6.0*bincb*bincb*bincb);\n\
+\\t\\tans=z[0]*y[0]+z[1]*y[1]+z[2]*y[2]+z[3]*y[3]; }\n\\telse {\n\
+\\t\\tb=log(b);\n\\t\\tbindx=(int)((b-blor)/bincr);\n\\t\\tif(bindx<1) \
+bindx=1;\n\\t\\telse if(bindx+2>=bnumr) bindx=bnumr-3;\n\
+\\t\\tfor(j=0;j<4;j++)\n\\t\\t\\tfor(y[j]=i=0;i<4;i++) {\n\
+\\t\\t\\t\\tif(sindx-1+i>=snum&&b==0) \
+y[j]+=z[i]*2.0*PI*exp(x[i])*(1.0+exp(x[i]));\n\\t\\t\\t\\telse \
+if(sindx-1+i>=snum) y[j]+=z[i]*2.0*PI*exp(2.0*x[i])*exp(b)/(exp(b)-1.0);\n\\t\
+\\t\\t\\telse if(sindx-1+i<0) y[j]+=z[i]*4.0*PI/3.0;\n\\t\\t\\t\\telse \
+y[j]+=z[i]*yr[(bindx-1+j)*snum+sindx-1+i]; }\n\\t\\tfor(j=0;j<4;j++) \
+x[j]=blor+(bindx-1+j)*bincr;\n\
+\\t\\tz[0]=(b-x[1])*(b-x[2])*(b-x[3])/(-6.0*bincr*bincr*bincr);\n\
+\\t\\tz[1]=(b-x[0])*(b-x[2])*(b-x[3])/(2.0*bincr*bincr*bincr);\n\
+\\t\\tz[2]=(b-x[0])*(b-x[1])*(b-x[3])/(-2.0*bincr*bincr*bincr);\n\
+\\t\\tz[3]=(b-x[0])*(b-x[1])*(b-x[2])/(6.0*bincr*bincr*bincr);\n\
+\\t\\tans=z[0]*y[0]+z[1]*y[1]+z[2]*y[2]+z[3]*y[3]; }\n\\treturn ans*a*a*a; }\n\
+\n/* bindingradius returns the binding radius that corresponds to some given\n\
+information.  rate is the actual rate constant (not reduced), dt is the time\n\
+step, and difc is the mutual diffusion constant (sum of reactant diffusion\n\
+constants).  If b is -1, the reaction is assumed to be irreversible; if b>=0 \
+and\nrel=0, then the b value is used as the unbinding radius; and if b>=0 and \
+rel=1,\nthen the b value is used as the ratio of the unbinding to binding \
+radius, b/a.\nThis algorithm executes a simple search from numrxnrate, based \
+on the fact that\nreaction rates monotonically increase with increasing a, \
+for all the b value\npossibilities.  The return value is usually the binding \
+radius.  However, a\nvalue of -1 signifies illegal input parameters.\n\
+Modified 2/22/08 to allow for dt==0. */\ndouble bindingradius(double \
+rate,double dt,double difc,double b,int rel) {\n\\tdouble a,lo,dif,step;\n\
+\\tint n;\n\n\\tif(rate<0||dt<0||difc<=0) return -1;\n\\tif(rate==0) return \
+0;\n\\tif(dt==0) {\n\\t\\tif(b<0) return rate/(4*PI*difc);\n\
+\\t\\tif(rel&&b>1) return rate*(1-1/b)/(4*PI*difc);\n\\t\\tif(rel&&b<=1) \
+return -1;\n\\t\\tif(b>0) return rate/(4*PI*difc+rate/b);\n\\t\\treturn -1; }\
+\n\\tstep=sqrt(2.0*difc*dt);\n\\tlo=0;\n\\ta=step;\n\
+\\twhile(numrxnrate(step,a,rel?b*a:b)<rate*dt) {\n\\t\\tlo=a;\n\\t\\ta*=2.0; \
+}\n\\tdif=a-lo;\n\\tfor(n=0;n<15;n++) {\n\\t\\tdif*=0.5;\n\\t\\ta=lo+dif;\n\
+\\t\\tif(numrxnrate(step,a,rel?b*a:b)<rate*dt) lo=a; }\n\\ta=lo+0.5*dif;\n\
+\\treturn a; }\n\n/* unbindingradius returns the unbinding radius that \
+corresponds to the geminate\nreaction probability in pgem, the time step in \
+dt, the mutual diffusion constant\nin difc, and the binding radius in a.  \
+Illegal inputs result in a return value\nof -2.  If the geminate binding \
+probability can be made as high as that\nrequested, the corresponding \
+unbinding radius is returned.  Otherwise, the\nnegative of the maximum \
+achievable pgem value is returned.\nModified 2/25/08 to allow for dt==0.  */\n\
+double unbindingradius(double pgem,double dt,double difc,double a) {\n\
+\\tdouble b,lo,dif,step,ki,kmax;\n\\tint n;\n\n\
+\\tif(pgem<=0||pgem>=1||difc<=0||a<=0||dt<0) return -2;\n\\tif(dt==0) return \
+a/pgem;\n\\tstep=sqrt(2.0*difc*dt);\n\\tki=numrxnrate(step,a,-1);\n\
+\\tkmax=numrxnrate(step,a,0);\n\\tif(1.0-ki/kmax<pgem) return ki/kmax-1.0;\n\
+\\tlo=0;\n\\tb=a;\n\\twhile(1.0-ki/numrxnrate(step,a,b)>pgem) {\n\\t\\tlo=b;\n\
+\\t\\tb*=2.0; }\n\\tdif=b-lo;\n\\tfor(n=0;n<15;n++) {\n\\t\\tdif*=0.5;\n\
+\\t\\tb=lo+dif;\n\\t\\tif(1.0-ki/numrxnrate(step,a,b)>pgem) lo=b; }\n\
+\\tb=lo+0.5*dif;\n\\treturn b; }\n\n\\tint main()\n\\t{ float rxrate, \
+binding, unbinding, step, ratecheck, germinate, dt, difc, temp;\n\\t\\trxrate \
+= 2.83; /* reaction rate */\n\\t\\tdt = 0.000001; /* time step */\n\
+\\t\\tgerminate = 0.2;  /* germinate probability */\n\\t\\tdifc = 60; /* difc \
+*/\n\n\\t\\t/* parameters: rate, dt, difc, b, rel */\n\\t  binding = \
+bindingradius(rxrate*(1-germinate),dt,difc,-1,0); /*units in um sec */\n\
+\\t\\tprintf(\\\"binding radius in um \\\\n\\\");\n\\t\\tprintf(\\\"%.9f\\\\n\
+\\\", binding);\n\\t  /* parameters: pgem, dt, difc, binding */\n\\t  \
+unbinding = unbindingradius(germinate,dt,difc,binding); /*units in um sec */\n\
+\\t\\tprintf(\\\"unbinding radius in um \\\\n\\\");\n\
+\\t\\tprintf(\\\"%.9f\\\\n\\\", unbinding);\n\n\\t\\tstep = \
+sqrt(2.0*difc*dt);\nprintf(\\\"step length in um \\\\n\\\");\n\\t\\tprintf(\\\
+\"%.9f\\\\n\\\", step);\n\\t  printf(\\\"\\\\nrate of reaction\\\\n\\\");\n\
+\\t\\tratecheck = (numrxnrate(step,binding,unbinding))/dt;\n\
+\\t\\tprintf(\\\"%.9f\\\\n\\\", ratecheck);\n\\t\\t\n\\t\\treturn 0;\n\\t}\n\n\
+\>\"", ",", " ", "\"\<bindunbind\>\""}], "]"}]}]], "Input",
+ CellChangeTimes->{{3.691050764108714*^9, 3.6910508031972837`*^9}, {
+   3.691051329251462*^9, 3.6910513295354447`*^9}, {3.6928290065078335`*^9, 
+   3.6928290164004283`*^9}, {3.692829435565833*^9, 3.6928294642809973`*^9}, 
+   3.6928296909215217`*^9, 3.6928297326155047`*^9, {3.6928297863942776`*^9, 
+   3.6928298787717977`*^9}, {3.6928299840734267`*^9, 3.692829987188771*^9}, {
+   3.692830188536124*^9, 3.692830189351377*^9}},
+ Background->RGBColor[0.87, 0.94, 1]],
+
+Cell[BoxData["\<\"C:\\\\Users\\\\Ali \
+Hashmi\\\\AppData\\\\Roaming\\\\Mathematica\\\\SystemFiles\\\\\
+LibraryResources\\\\Windows-x86-64\\\\bindunbind.exe\"\>"], "Output",
+ CellChangeTimes->{
+  3.6910508437411814`*^9, 3.6910513354052954`*^9, 3.6928297000686436`*^9, {
+   3.6928297340548058`*^9, 3.692829738539359*^9}, {3.692829791862359*^9, 
+   3.6928298876874013`*^9}, 3.692829999618995*^9, 3.6928301298426127`*^9, 
+   3.692830194166825*^9}]
+}, Open  ]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Evaluation", "Section",
+ CellChangeTimes->{{3.6910514294613276`*^9, 3.691051431938724*^9}}],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"str", " ", "=", " ", 
+  RowBox[{"Import", "[", 
+   RowBox[{
+    RowBox[{"\"\<!\>\"", "<>", 
+     RowBox[{"QuoteFile", "[", "bindunbind", "]"}]}], ",", "\"\<Text\>\""}], 
+   "]"}]}]], "Input",
+ CellChangeTimes->{{3.6910508267418528`*^9, 3.6910508296947365`*^9}, {
+  3.6910535891986003`*^9, 3.691053590229883*^9}},
+ Background->RGBColor[0.87, 0.94, 1]],
+
+Cell[BoxData["\<\"binding radius in um \\n0.008920717\\nunbinding radius in \
+um \\n0.012622482\\nstep length in um \\n0.010954451\\n\\nrate of \
+reaction\\n2.830022097\"\>"], "Output",
+ CellChangeTimes->{
+  3.691051335505354*^9, 3.691051376867581*^9, 3.6910535907982874`*^9, 
+   3.691053764886836*^9, 3.6928297002107677`*^9, 3.692829738617807*^9, {
+   3.692829791947027*^9, 3.692829887771634*^9}, 3.6928299997036314`*^9, 
+   3.69283012992727*^9, 3.692830194251463*^9},
+ Background->RGBColor[0.88, 1, 0.88]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"{", 
+   RowBox[{"binding", ",", "unbinding", ",", "step", ",", "rate"}], "}"}], 
+  "=", 
+  RowBox[{"Map", "[", 
+   RowBox[{
+    RowBox[{
+     RowBox[{
+      RowBox[{"Interpreter", "[", "\"\<Number\>\"", "]"}], "[", "#", "]"}], 
+     "&"}], ",", 
+    RowBox[{"StringCases", "[", 
+     RowBox[{"str", ",", "NumberString"}], "]"}]}], "]"}]}]], "Input",
+ CellChangeTimes->{{3.6910525092889986`*^9, 3.691052510573515*^9}, {
+  3.6910525744316864`*^9, 3.6910526144067187`*^9}, {3.6910526841418943`*^9, 
+  3.69105269642636*^9}, {3.6910527410165186`*^9, 3.6910527446472826`*^9}, {
+  3.691052780163159*^9, 3.691052853937567*^9}, {3.6910529221129627`*^9, 
+  3.691052990468116*^9}, {3.6910530229285536`*^9, 3.69105304487632*^9}, {
+  3.6910530773620276`*^9, 3.691053110583433*^9}, {3.6910531638700495`*^9, 
+  3.6910531758982954`*^9}, {3.6910532791711583`*^9, 3.691053288920455*^9}, {
+  3.6910534146215096`*^9, 3.6910534855564566`*^9}, {3.6910535600323467`*^9, 
+  3.6910535784133215`*^9}, {3.6928300533171678`*^9, 3.6928300710352025`*^9}},
+ Background->RGBColor[0.87, 0.94, 1]],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+  "0.008920717`", ",", "0.012622482`", ",", "0.010954451`", ",", 
+   "2.830022097`"}], "}"}]], "Output",
+ CellChangeTimes->{
+  3.69282970047875*^9, 3.692829738617807*^9, {3.692829791962613*^9, 
+   3.692829887771634*^9}, 3.692829999819343*^9, {3.6928300570864987`*^9, 
+   3.69283007155091*^9}, 3.69283012992727*^9, 3.6928301942847524`*^9}]
+}, Open  ]]
+}, Open  ]]
+},
+WindowSize->{1584, 817},
+WindowMargins->{{-8, Automatic}, {Automatic, 0}},
+FrontEndVersion->"10.4 for Microsoft Windows (64-bit) (April 11, 2016)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[CellGroupData[{
+Cell[580, 22, 240, 3, 70, "Section"],
+Cell[823, 27, 215, 4, 47, "Input"],
+Cell[CellGroupData[{
+Cell[1063, 35, 18405, 274, 6308, "Input"],
+Cell[19471, 311, 443, 7, 31, "Output"]
+}, Open  ]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[19963, 324, 97, 1, 70, "Section"],
+Cell[CellGroupData[{
+Cell[20085, 329, 374, 9, 47, "Input"],
+Cell[20462, 340, 507, 8, 208, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[21006, 353, 1098, 22, 47, "Input"],
+Cell[22107, 377, 378, 8, 31, "Output"]
+}, Open  ]]
+}, Open  ]]
+}
+]
+*)
+
