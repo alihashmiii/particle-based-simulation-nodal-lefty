@@ -2,7 +2,6 @@
 an attempt to model reaction diffusion using particles
 
 `@Author: Ali Hashmi`
-
 `Date: Dec 2015 - Feb 2016`
 
 You need Mathematica or Wolfram CDF (which is free) to view the notebooks containing the code properly !
