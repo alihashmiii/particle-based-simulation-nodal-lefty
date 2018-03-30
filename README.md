@@ -1,5 +1,5 @@
 # Particle-based-reaction-diffusion-simulation-nodal-lefty
-an attempt to model reaction diffusion using particles
+an attempt to model reaction diffusion using particles (code was prototyped quickly, hence i did not optimize it for speed)
 
 `@Author: Ali Hashmi`
 
